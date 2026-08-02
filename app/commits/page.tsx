@@ -3,6 +3,7 @@
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts";
 import { format } from "date-fns";
 import { commits } from "../data/mockData";
+import DemoBanner from "@/components/DemoBanner";
 
 const COMMIT_TYPE_LABELS = {
   feat: '新功能',
@@ -36,6 +37,10 @@ export default function CommitsPage() {
 
   return (
     <div className="p-8">
+      <DemoBanner
+        title="演示页面（Demo）"
+        description="提交记录 / 饼图使用 mockData.ts 静态数据，待后端补齐 commits 相关接口后将自动接入真实数据。"
+      />
       {/* 页面标题 */}
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-gray-800">提交记录</h1>

@@ -1,46 +1,48 @@
-"use client";
+'use client';
 
-import { use } from "react";
-import { notFound } from "next/navigation";
-import Link from "next/link";
-import { teamMembers } from "../../data/mockData";
+import { useEffect, useState } from 'react';
+import { useParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { api, avatarOf, MemberDetail } from '@/lib/api';
+import { useAuth } from '@/components/AuthProvider';
 
-// 告诉 Next.js 这些路由是动态的
-export const dynamicParams = true;
+export default function TeamMemberDetailPage() {
+  const params = useParams<{ id: string }>();
+  const id = params?.id;
+  const { auth } = useAuth();
+  const router = useRouter();
+  const [member, setMember] = useState<MemberDetail | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-const DAY_KEYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-const DAY_LABELS = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
+  useEffect(() => {
+    if (!auth || !id) return;
+    setLoading(true);
+    setError(null);
+    api
+      .getMember(id, auth)
+      .then(setMember)
+      .catch((e) => {
+        if (e && typeof e === 'object' && 'status' in e && (e as { status: number }).status === 404) {
+          router.replace('/team');
+        } else {
+          setError(e instanceof Error ? e.message : '加载失败');
+        }
+      })
+      .finally(() => setLoading(false));
+  }, [auth, id, router]);
 
-// 根据提交数量返回颜色深浅 (0提交: 浅灰, 越多越深)
-const getHeatColor = (count: number, maxCount: number) => {
-  if (count === 0) return '#e5e7eb'; // 浅灰色
-  if (maxCount === 0) return '#e5e7eb';
-
-  const intensity = count / maxCount;
-  if (intensity <= 0.25) return '#93c5fd'; // 最浅蓝
-  if (intensity <= 0.5) return '#60a5fa'; // 浅蓝
-  if (intensity <= 0.75) return '#3b82f6'; // 中蓝
-  return '#1d4ed8'; // 深蓝
-};
-
-export default function TeamMemberDetailPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
-  const { id } = use(params);
-  const member = teamMembers.find(m => String(m.id) === id);
-
-  if (!member) {
-    notFound();
-  }
-
-  const totalCommits = Object.values(member.weeklyCommits).reduce((a, b) => a + b, 0);
-  const maxCommits = Math.max(...Object.values(member.weeklyCommits));
+  if (loading) return <div className="p-8 text-gray-500">加载中…</div>;
+  if (error)
+    return (
+      <div className="p-8">
+        <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-3 py-2">{error}</div>
+      </div>
+    );
+  if (!member) return null;
 
   return (
     <div className="p-8">
-      {/* 返回链接和页面标题 */}
       <div className="mb-8">
         <Link href="/team" className="text-blue-600 hover:underline text-sm mb-4 inline-block">
           ← 返回团队列表
@@ -48,89 +50,54 @@ export default function TeamMemberDetailPage({
         <h1 className="text-2xl font-bold text-gray-800">成员详情</h1>
       </div>
 
-      {/* 基本信息卡片 */}
       <div className="bg-white rounded-xl shadow-sm p-8 mb-8">
         <div className="flex items-center gap-8">
-          {/* 大头像 */}
-          <div className="w-32 h-32 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white text-6xl font-bold">
-            {member.avatar}
+          <div className="w-32 h-32 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white text-5xl font-bold">
+            {avatarOf(member.name)}
           </div>
-
-          {/* 信息 */}
-          <div>
+          <div className="flex-1">
             <h2 className="text-3xl font-bold text-gray-800">{member.name}</h2>
-            <p className="text-lg text-gray-500 mt-1">{member.role}</p>
-            <div className="mt-4 flex gap-6">
-              <div>
-                <p className="text-sm text-gray-500">本周提交总数</p>
-                <p className="text-2xl font-bold text-blue-600">{totalCommits} 次</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">最高单日提交</p>
-                <p className="text-2xl font-bold text-green-600">{maxCommits} 次</p>
-              </div>
+            <p className="text-lg text-gray-500 mt-1">{member.email}</p>
+            <div className="mt-3 flex flex-wrap gap-2 text-xs">
+              <span className="px-2 py-1 rounded bg-blue-50 text-blue-700 font-mono">{member.role}</span>
+              <span
+                className={`px-2 py-1 rounded font-mono ${
+                  member.status === 'active' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
+                }`}
+              >
+                {member.status}
+              </span>
+              {member.department && (
+                <span className="px-2 py-1 rounded bg-slate-100 text-slate-700">{member.department}</span>
+              )}
             </div>
           </div>
         </div>
       </div>
 
-      {/* 7天热力图 */}
       <div className="bg-white rounded-xl shadow-sm p-8">
-        <h3 className="text-xl font-bold text-gray-800 mb-6">7天提交热力图</h3>
-
-        {/* 热力图方块 */}
-        <div className="flex items-center gap-3 mb-6">
-          {DAY_KEYS.map((dayKey, index) => {
-            const commitCount = Number(member.weeklyCommits[dayKey as keyof typeof member.weeklyCommits]) || 0;
-            const bgColor = getHeatColor(commitCount, maxCommits);
-
-            return (
-              <div key={dayKey} className="flex flex-col items-center gap-2">
-                {/* 热力方块 */}
-                <div
-                  className="w-16 h-16 rounded-lg flex items-center justify-center text-white font-bold text-lg cursor-pointer hover:scale-110 transition-transform shadow-sm"
-                  style={{ backgroundColor: bgColor }}
-                  title={`${DAY_LABELS[index]}: ${commitCount} 次提交`}
-                >
-                  {commitCount}
-                </div>
-                {/* 星期标签 */}
-                <span className="text-sm text-gray-600">{DAY_LABELS[index]}</span>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* 颜色图例 */}
-        <div className="flex items-center gap-4 pt-6 border-t border-gray-100">
-          <span className="text-sm text-gray-500">颜色图例:</span>
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-gray-500">0 次</span>
-            <div className="w-6 h-6 rounded" style={{ backgroundColor: '#e5e7eb' }}></div>
-            <div className="w-6 h-6 rounded" style={{ backgroundColor: '#93c5fd' }}></div>
-            <div className="w-6 h-6 rounded" style={{ backgroundColor: '#60a5fa' }}></div>
-            <div className="w-6 h-6 rounded" style={{ backgroundColor: '#3b82f6' }}></div>
-            <div className="w-6 h-6 rounded" style={{ backgroundColor: '#1d4ed8' }}></div>
-            <span className="text-xs text-gray-500">更多</span>
+        <h3 className="text-xl font-bold text-gray-800 mb-6">元数据</h3>
+        <dl className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+          <div>
+            <dt className="text-gray-500">ID</dt>
+            <dd className="font-mono text-gray-800">{member.id}</dd>
           </div>
-        </div>
-
-        {/* 每日详细数据 */}
-        <div className="mt-8 pt-6 border-t border-gray-100">
-          <h4 className="font-semibold text-gray-700 mb-4">每日提交详情</h4>
-          <div className="grid grid-cols-7 gap-4">
-            {DAY_KEYS.map((dayKey, index) => {
-              const commitCount = Number(member.weeklyCommits[dayKey as keyof typeof member.weeklyCommits]) || 0;
-              return (
-                <div key={dayKey} className="text-center p-3 bg-gray-50 rounded-lg">
-                  <p className="text-sm text-gray-500">{DAY_LABELS[index]}</p>
-                  <p className="text-xl font-bold text-blue-600 mt-1">{commitCount}</p>
-                  <p className="text-xs text-gray-400">次提交</p>
-                </div>
-              );
-            })}
+          <div>
+            <dt className="text-gray-500">加入时间</dt>
+            <dd className="text-gray-800">{new Date(member.joined_at).toLocaleString()}</dd>
           </div>
-        </div>
+          <div>
+            <dt className="text-gray-500">所属团队</dt>
+            <dd className="text-gray-800">#{member.team_id}</dd>
+          </div>
+          <div>
+            <dt className="text-gray-500">邮箱</dt>
+            <dd className="text-gray-800">{member.email}</dd>
+          </div>
+        </dl>
+        <p className="mt-6 text-xs text-gray-400">
+          备注：后端当前未提供 /members/{'{id}'}/commits 接口，热力图模块待后端补齐后接入。
+        </p>
       </div>
     </div>
   );

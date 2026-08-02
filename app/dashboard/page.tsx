@@ -1,10 +1,15 @@
 "use client";
 
 import { statistics } from "../data/mockData";
+import DemoBanner from "@/components/DemoBanner";
 
 export default function DashboardPage() {
   return (
     <div className="p-8">
+      <DemoBanner
+        title="演示页面（Demo）"
+        description="总览卡片使用 mockData.ts 静态数据。团队成员相关真实数据请前往「成员列表」查看。"
+      />
       {/* 页面标题 */}
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-gray-800">总览 Dashboard</h1>

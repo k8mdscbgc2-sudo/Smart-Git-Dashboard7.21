@@ -1,6 +1,7 @@
 "use client";
 
 import { pullRequests } from "../data/mockData";
+import DemoBanner from "@/components/DemoBanner";
 
 export default function PRPage() {
   // 按状态筛选 PR
@@ -10,6 +11,10 @@ export default function PRPage() {
 
   return (
     <div className="p-8">
+      <DemoBanner
+        title="演示页面（Demo）"
+        description="PR 看板使用 mockData.ts 静态数据，待后端补齐 PR 相关接口后将自动接入真实数据。"
+      />
       {/* 页面标题 */}
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-gray-800">PR 看板</h1>

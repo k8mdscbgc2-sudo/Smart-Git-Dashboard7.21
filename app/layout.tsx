@@ -1,5 +1,6 @@
 import "./globals.css";
 import Sidebar from "@/components/Sidebar";
+import { AuthProvider } from "@/components/AuthProvider";
 
 export const metadata = {
   title: "智能Git看板",
@@ -14,10 +15,12 @@ export default function RootLayout({
   return (
     <html lang="zh-CN">
       <body>
-        <div className="flex h-screen bg-gray-100">
-          <Sidebar />
-          <main className="flex-1 overflow-auto">{children}</main>
-        </div>
+        <AuthProvider>
+          <div className="flex h-screen bg-gray-100">
+            <Sidebar />
+            <main className="flex-1 overflow-auto">{children}</main>
+          </div>
+        </AuthProvider>
       </body>
     </html>
   );

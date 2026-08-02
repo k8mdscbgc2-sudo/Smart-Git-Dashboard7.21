@@ -1,122 +1,113 @@
-import Link from "next/link";
-import { notFound } from "next/navigation";
-import { getMemberById, getMembers } from "../../../lib/data";
-import Heatmap from "../../../components/Heatmap";
+'use client';
 
-// 提供静态生成的参数
-export async function generateStaticParams() {
-  const members = await getMembers();
-  return members.map((m) => ({ id: String(m.id) }));
-}
+import { useEffect, useState } from 'react';
+import { useParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { api, avatarOf, MemberDetail } from '@/lib/api';
+import { useAuth } from '@/components/AuthProvider';
 
-const DAY_LABELS: Record<string, string> = {
-  Monday: '周一',
-  Tuesday: '周二',
-  Wednesday: '周三',
-  Thursday: '周四',
-  Friday: '周五',
-  Saturday: '周六',
-  Sunday: '周日',
-};
+export default function MemberDetailPage() {
+  const params = useParams<{ id: string }>();
+  const id = params?.id;
+  const { auth } = useAuth();
+  const router = useRouter();
+  const [member, setMember] = useState<MemberDetail | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-export default async function MemberDetailPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
-  const { id } = await params;
-  const member = await getMemberById(id);
+  useEffect(() => {
+    if (!auth || !id) return;
+    setLoading(true);
+    setError(null);
+    api
+      .getMember(id, auth)
+      .then(setMember)
+      .catch((e) => {
+        if (e && typeof e === 'object' && 'status' in e && (e as { status: number }).status === 404) {
+          router.replace('/members');
+        } else {
+          setError(e instanceof Error ? e.message : '加载失败');
+        }
+      })
+      .finally(() => setLoading(false));
+  }, [auth, id, router]);
 
-  if (!member) {
-    notFound();
+  if (loading) {
+    return <div className="p-8 text-gray-500">加载中…</div>;
   }
+  if (error) {
+    return (
+      <div className="p-8">
+        <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-3 py-2">
+          {error}
+        </div>
+      </div>
+    );
+  }
+  if (!member) return null;
 
   return (
     <div className="p-8">
-      {/* 返回链接 */}
       <div className="mb-6">
         <Link href="/members" className="text-blue-600 hover:underline text-sm">
           ← 返回成员列表
         </Link>
       </div>
 
-      {/* 页面标题 */}
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-gray-800">成员详情</h1>
-        <p className="text-gray-500 text-sm mt-1">服务端组件渲染</p>
+        <p className="text-gray-500 text-sm mt-1">来自后端 API 实时数据</p>
       </div>
 
-      {/* 成员基本信息卡片 */}
       <div className="bg-white rounded-xl shadow-sm p-8 mb-8">
         <div className="flex items-center gap-8">
-          {/* 头像 */}
-          <div className="w-32 h-32 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white text-6xl font-bold">
-            {member.avatar}
+          <div className="w-32 h-32 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white text-5xl font-bold">
+            {avatarOf(member.name)}
           </div>
-
-          {/* 信息 */}
-          <div>
+          <div className="flex-1">
             <h2 className="text-3xl font-bold text-gray-800">{member.name}</h2>
             <p className="text-lg text-gray-500 mt-1">{member.email}</p>
-            <p className="text-sm text-gray-400 mt-2">{member.role}</p>
+            <div className="mt-3 flex flex-wrap gap-2 text-xs">
+              <span className="px-2 py-1 rounded bg-blue-50 text-blue-700 font-mono">{member.role}</span>
+              <span
+                className={`px-2 py-1 rounded font-mono ${
+                  member.status === 'active' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
+                }`}
+              >
+                {member.status}
+              </span>
+              {member.department && (
+                <span className="px-2 py-1 rounded bg-slate-100 text-slate-700">{member.department}</span>
+              )}
+              <span className="px-2 py-1 rounded bg-slate-100 text-slate-700">Team #{member.team_id}</span>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* 本周提交热力图 - 使用客户端组件 */}
-      <div className="bg-white rounded-xl shadow-sm p-8 mb-8">
-        <h3 className="text-xl font-bold text-gray-800 mb-6">7天提交热力图</h3>
-        <p className="text-sm text-gray-500 mb-6">数据由服务端获取，热力图组件在客户端渲染</p>
-
-        <Heatmap
-          weeklyCommits={[
-            member.weeklyCommits.Monday,
-            member.weeklyCommits.Tuesday,
-            member.weeklyCommits.Wednesday,
-            member.weeklyCommits.Thursday,
-            member.weeklyCommits.Friday,
-            member.weeklyCommits.Saturday,
-            member.weeklyCommits.Sunday,
-          ]}
-        />
-      </div>
-
-      {/* 文字数据明细 */}
       <div className="bg-white rounded-xl shadow-sm p-8">
-        <h3 className="text-xl font-bold text-gray-800 mb-6">详细数据</h3>
-
-        <div className="space-y-3">
-          <p className="text-gray-700">
-            <span className="font-semibold">周一：</span>{member.weeklyCommits.Monday} 次
-          </p>
-          <p className="text-gray-700">
-            <span className="font-semibold">周二：</span>{member.weeklyCommits.Tuesday} 次
-          </p>
-          <p className="text-gray-700">
-            <span className="font-semibold">周三：</span>{member.weeklyCommits.Wednesday} 次
-          </p>
-          <p className="text-gray-700">
-            <span className="font-semibold">周四：</span>{member.weeklyCommits.Thursday} 次
-          </p>
-          <p className="text-gray-700">
-            <span className="font-semibold">周五：</span>{member.weeklyCommits.Friday} 次
-          </p>
-          <p className="text-gray-700">
-            <span className="font-semibold">周六：</span>{member.weeklyCommits.Saturday} 次
-          </p>
-          <p className="text-gray-700">
-            <span className="font-semibold">周日：</span>{member.weeklyCommits.Sunday} 次
-          </p>
-        </div>
-
-        <div className="mt-6 pt-6 border-t border-gray-100">
-          <p className="text-lg">
-            <span className="font-semibold text-gray-800">本周总提交：</span>
-            <span className="text-blue-600 font-bold">
-              {Object.values(member.weeklyCommits).reduce((a, b) => a + b, 0)} 次
-            </span>
-          </p>
-        </div>
+        <h3 className="text-xl font-bold text-gray-800 mb-6">元数据</h3>
+        <dl className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+          <div>
+            <dt className="text-gray-500">ID</dt>
+            <dd className="font-mono text-gray-800">{member.id}</dd>
+          </div>
+          <div>
+            <dt className="text-gray-500">加入时间</dt>
+            <dd className="text-gray-800">{new Date(member.joined_at).toLocaleString()}</dd>
+          </div>
+          <div>
+            <dt className="text-gray-500">邮箱</dt>
+            <dd className="text-gray-800">{member.email}</dd>
+          </div>
+          <div>
+            <dt className="text-gray-500">角色</dt>
+            <dd className="text-gray-800">{member.role}</dd>
+          </div>
+        </dl>
+        <p className="mt-6 text-xs text-gray-400">
+          备注：后端当前未提供 /members/{'{id}'}/commits 接口，热力图模块待后端补齐后接入。
+        </p>
       </div>
     </div>
   );
