@@ -1,5 +1,5 @@
 {
-  "name": "Smart Git Dashboard7.21",
+  "name": "smart-git-dashboard7.21",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
@@ -26,6 +26,6 @@
     "tailwindcss": "^4.3.3"
   },
   "devDependencies": {
-    "typescript": "7.0.2"
+    "typescript": "^6.0.0"
   }
 }

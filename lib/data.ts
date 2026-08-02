@@ -19,9 +19,6 @@ export interface TeamMember {
 
 // 模拟从数据库获取成员数据
 export async function getMembers(): Promise<TeamMember[]> {
-  // 模拟网络延迟
-  await new Promise(resolve => setTimeout(resolve, 100));
-  
   return [
     {
       id: 1,

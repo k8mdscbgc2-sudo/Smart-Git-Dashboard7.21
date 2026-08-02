@@ -1,7 +1,13 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getMemberById } from "../../../lib/data";
+import { getMemberById, getMembers } from "../../../lib/data";
 import Heatmap from "../../../components/Heatmap";
+
+// 提供静态生成的参数
+export async function generateStaticParams() {
+  const members = await getMembers();
+  return members.map((m) => ({ id: String(m.id) }));
+}
 
 const DAY_LABELS: Record<string, string> = {
   Monday: '周一',
@@ -13,9 +19,14 @@ const DAY_LABELS: Record<string, string> = {
   Sunday: '周日',
 };
 
-export default async function MemberDetailPage({ params }: { params: { id: string } }) {
-  const member = await getMemberById(params.id);
-  
+export default async function MemberDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+  const member = await getMemberById(id);
+
   if (!member) {
     notFound();
   }
@@ -42,7 +53,7 @@ export default async function MemberDetailPage({ params }: { params: { id: strin
           <div className="w-32 h-32 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white text-6xl font-bold">
             {member.avatar}
           </div>
-          
+
           {/* 信息 */}
           <div>
             <h2 className="text-3xl font-bold text-gray-800">{member.name}</h2>
@@ -56,8 +67,8 @@ export default async function MemberDetailPage({ params }: { params: { id: strin
       <div className="bg-white rounded-xl shadow-sm p-8 mb-8">
         <h3 className="text-xl font-bold text-gray-800 mb-6">7天提交热力图</h3>
         <p className="text-sm text-gray-500 mb-6">数据由服务端获取，热力图组件在客户端渲染</p>
-        
-        <Heatmap 
+
+        <Heatmap
           weeklyCommits={[
             member.weeklyCommits.Monday,
             member.weeklyCommits.Tuesday,
@@ -66,14 +77,14 @@ export default async function MemberDetailPage({ params }: { params: { id: strin
             member.weeklyCommits.Friday,
             member.weeklyCommits.Saturday,
             member.weeklyCommits.Sunday,
-          ]} 
+          ]}
         />
       </div>
 
       {/* 文字数据明细 */}
       <div className="bg-white rounded-xl shadow-sm p-8">
         <h3 className="text-xl font-bold text-gray-800 mb-6">详细数据</h3>
-        
+
         <div className="space-y-3">
           <p className="text-gray-700">
             <span className="font-semibold">周一：</span>{member.weeklyCommits.Monday} 次
