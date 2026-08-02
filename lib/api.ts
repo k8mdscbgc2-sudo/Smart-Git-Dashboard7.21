@@ -2,9 +2,18 @@
 // 文档：https://smart-commit-helper-backend-production.up.railway.app/docs
 // 所有非 /health 接口需要 X-Team-Id + X-Role header
 
+// 浏览器端直连后端；不依赖 Next.js 的 /api/v1 rewrite
+// 本地开发请在 .env.local 设置：NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
 export const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL ||
-  'https://smart-commit-helper-backend-production.up.railway.app';
+  process.env.NEXT_PUBLIC_API_BASE_URL || 'https://smart-commit-helper-backend-production.up.railway.app';
+
+if (!process.env.NEXT_PUBLIC_API_BASE_URL && typeof window !== 'undefined') {
+  // 仅提醒；不阻断
+  // eslint-disable-next-line no-console
+  console.warn(
+    '[sgd] NEXT_PUBLIC_API_BASE_URL 未设置，使用默认 Railway 后端：' + API_BASE_URL,
+  );
+}
 
 // ============== 类型（从 OpenAPI 推导） ==============
 
