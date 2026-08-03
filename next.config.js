@@ -1,19 +1,18 @@
 /** @type {import('next').NextConfig} */
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
-if (!API_BASE_URL) {
-  // 本地不强制要求（开发用），部署时务必在 Vercel 设置
-  console.warn('[next.config] NEXT_PUBLIC_API_BASE_URL is not set; /api/v1/* rewrite disabled');
-}
+// BACKEND_API_BASE_URL 是服务端私有 env（没有 NEXT_PUBLIC_ 前缀，不会暴露到客户端 bundle）
+// - 部署：Vercel Project Settings -> Environment Variables 设置 BACKEND_API_BASE_URL
+// - 本地：根目录 .env.local 里设置 BACKEND_API_BASE_URL=http://localhost:8000
+//   （或不设置，本地默认值 = Railway）
+const API_BASE_URL =
+  process.env.BACKEND_API_BASE_URL ||
+  'https://smart-commit-helper-backend-production.up.railway.app';
 
 const nextConfig = {
   reactStrictMode: true,
   async rewrites() {
-    if (!API_BASE_URL) {
-      // 没有后端地址时不挂载 rewrite，浏览器请求将直连（见 lib/api.ts）
-      return [];
-    }
     return [
-      // 反代后端 API，避免浏览器 CORS
+      // /api/v1/* 在 Vercel / Next 服务端反代到后端，
+      // 浏览器始终请求同源（避免 CORS）
       {
         source: '/api/v1/:path*',
         destination: `${API_BASE_URL}/api/v1/:path*`,
