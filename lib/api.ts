@@ -152,7 +152,7 @@ async function request<T>(
     headers['X-Role'] = opts.auth.role;
   }
 
-  const res = await fetch(`${API_BASE_URL}${path}`, {
+  const res = await fetch(path, {
     method,
     headers,
     body: body !== undefined ? JSON.stringify(body) : undefined,
